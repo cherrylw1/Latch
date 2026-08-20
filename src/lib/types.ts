@@ -4,6 +4,8 @@ export type AttachmentMeta = {
   type: string;
   size: number;
   createdAt: string;
+  url?: string;
+  pathname?: string;
 };
 
 export type LatchNote = {

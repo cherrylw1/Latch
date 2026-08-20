@@ -2,9 +2,9 @@
 
 Latch is a personal relay for notes, links, images, PDFs, CSVs, and files that need to move between devices.
 
-## Current release
+## Storage
 
-This first release is a complete browser-local app. It uses IndexedDB, so notes and attachments persist across refreshes in the same browser while the Vercel storage integration is intentionally deferred.
+Latch uses Vercel Blob for file contents and Vercel Postgres (Neon) for note and attachment metadata. Those services synchronize notes between every browser that opens the deployed app. IndexedDB remains a development fallback whenever the Vercel environment variables are absent.
 
 - Capture text, links, and files in one place.
 - Upload any normal file type up to 100 MB per file.
@@ -26,13 +26,12 @@ pnpm dev
 
 Open `http://localhost:3000`.
 
-## Production storage step
+## Connect Vercel storage
 
-The interface and local data boundary are ready for the next step:
+After importing the project to Vercel:
 
-1. Import this repository into Vercel.
-2. Enable Vercel Blob for files.
-3. Add a Postgres database through the Vercel dashboard.
-4. Move the IndexedDB adapter in `src/lib/storage.ts` behind server APIs backed by Blob and Postgres.
+1. Create a Vercel Blob store and connect it to this project. Vercel sets `BLOB_READ_WRITE_TOKEN`.
+2. Create a Neon Postgres database from the Vercel Storage tab and connect it to this project. Vercel sets `DATABASE_URL`.
+3. Redeploy. The database tables are created automatically the first time Latch loads.
 
-The public GitHub repository contains application code only. Files and notes will be stored outside GitHub once the Vercel services are connected.
+The public GitHub repository contains application code only. Notes are stored in Postgres and attachments are stored in Blob, never in GitHub.

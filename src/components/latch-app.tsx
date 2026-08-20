@@ -33,6 +33,7 @@ import {
   getAllAttachments,
   getAttachment,
   getNotes,
+  getStorageMode,
   removeAttachment,
   removeNote,
   saveAttachments,
@@ -146,7 +147,7 @@ export function LatchApp() {
   useEffect(() => {
     getNotes()
       .then(async (storedNotes) => {
-        if (storedNotes.length) return storedNotes;
+        if (storedNotes.length || getStorageMode() === "remote") return storedNotes;
         await Promise.all(seedNotes.map((note) => saveNote(note)));
         return seedNotes;
       })
@@ -240,24 +241,29 @@ export function LatchApp() {
     setIsSaving(true);
     const id = crypto.randomUUID();
     const timestamp = new Date().toISOString();
-    const attachments = await saveAttachments(id, pendingFiles);
-    const note: LatchNote = {
-      id,
-      title: draft.title.trim() || pendingFiles[0]?.name.replace(/\.[^/.]+$/, "") || "Untitled note",
-      body: draft.body.trim(),
-      sourceUrl,
-      attachments,
-      pinned: false,
-      archived: false,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    };
-    await saveNote(note);
-    setNotes((current) => [note, ...current]);
-    setSelectedId(note.id);
-    resetComposer();
-    setIsSaving(false);
-    setNotice("Added to Latch.");
+    try {
+      const attachments = await saveAttachments(id, pendingFiles);
+      const note: LatchNote = {
+        id,
+        title: draft.title.trim() || pendingFiles[0]?.name.replace(/\.[^/.]+$/, "") || "Untitled note",
+        body: draft.body.trim(),
+        sourceUrl,
+        attachments,
+        pinned: false,
+        archived: false,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+      await saveNote(note);
+      setNotes((current) => [note, ...current]);
+      setSelectedId(note.id);
+      resetComposer();
+      setNotice("Added to Latch.");
+    } catch {
+      setNotice("Latch could not save this note. Check your connection and try again.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   async function updateNote(next: LatchNote) {
