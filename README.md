@@ -32,7 +32,7 @@ Open `http://localhost:3000`.
 
 After importing the project to Vercel:
 
-1. Create a Vercel Blob store and connect it to this project. Vercel sets `BLOB_READ_WRITE_TOKEN`.
+1. Create a private Vercel Blob store and connect it to this project with the custom environment prefix `LATCH_FILES`. Vercel sets `LATCH_FILES_READ_WRITE_TOKEN`.
 2. Create a Neon Postgres database from the Vercel Storage tab and connect it to this project. Vercel sets `DATABASE_URL`.
 3. Redeploy. The database tables are created automatically the first time Latch loads.
 4. Add a strong `LATCH_PASSWORD` value in **Project Settings → Environment Variables** for Production and Preview, then redeploy.

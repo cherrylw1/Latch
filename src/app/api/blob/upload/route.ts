@@ -1,7 +1,7 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
 import { isAuthenticatedRequest } from "@/lib/server/auth";
-import { isStorageConfigured } from "@/lib/server/storage";
+import { blobReadWriteToken, isStorageConfigured } from "@/lib/server/storage";
 
 const maximumFileSize = 100 * 1024 * 1024;
 
@@ -13,6 +13,7 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as HandleUploadBody;
     const response = await handleUpload({
+      token: blobReadWriteToken(),
       body,
       request,
       onBeforeGenerateToken: async () => ({

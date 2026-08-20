@@ -33,7 +33,13 @@ function database() {
 }
 
 export function isStorageConfigured() {
-  return Boolean((process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? process.env.NEON_DATABASE_URL) && process.env.BLOB_READ_WRITE_TOKEN);
+  return Boolean((process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? process.env.NEON_DATABASE_URL) && process.env.LATCH_FILES_READ_WRITE_TOKEN);
+}
+
+export function blobReadWriteToken() {
+  const token = process.env.LATCH_FILES_READ_WRITE_TOKEN;
+  if (!token) throw new Error("LATCH_FILES_READ_WRITE_TOKEN is not configured.");
+  return token;
 }
 
 async function ensureSchema() {
@@ -150,7 +156,9 @@ export async function deleteNote(id: string) {
   const attachmentRows = await sql`SELECT pathname FROM latch_attachments WHERE note_id = ${id}`;
   await sql`DELETE FROM latch_notes WHERE id = ${id}`;
   await Promise.all(
-    (attachmentRows as Array<{ pathname: string }>).map(({ pathname }) => (pathname ? del(pathname).catch(() => undefined) : undefined)),
+    (attachmentRows as Array<{ pathname: string }>).map(({ pathname }) =>
+      pathname ? del(pathname, { token: blobReadWriteToken() }).catch(() => undefined) : undefined,
+    ),
   );
 }
 
@@ -160,6 +168,6 @@ export async function deleteAttachment(id: string): Promise<boolean> {
   const rows = await sql`DELETE FROM latch_attachments WHERE id = ${id} RETURNING pathname`;
   const pathname = (rows as Array<{ pathname: string }>)[0]?.pathname;
   if (!pathname) return false;
-  await del(pathname).catch(() => undefined);
+  await del(pathname, { token: blobReadWriteToken() }).catch(() => undefined);
   return true;
 }
