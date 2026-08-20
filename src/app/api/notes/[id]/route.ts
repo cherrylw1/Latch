@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { deleteNote, isStorageConfigured, updateNote } from "@/lib/server/storage";
+import { isAuthenticatedRequest } from "@/lib/server/auth";
 import type { LatchNote } from "@/lib/types";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -9,6 +10,7 @@ function unavailable() {
 }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
+  if (!isAuthenticatedRequest(request)) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   if (!isStorageConfigured()) return unavailable();
   try {
     const [{ id }, { note }] = await Promise.all([params, request.json() as Promise<{ note?: LatchNote }>]);
@@ -21,7 +23,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   }
 }
 
-export async function DELETE(_: Request, { params }: RouteContext) {
+export async function DELETE(request: Request, { params }: RouteContext) {
+  if (!isAuthenticatedRequest(request)) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   if (!isStorageConfigured()) return unavailable();
   try {
     const { id } = await params;

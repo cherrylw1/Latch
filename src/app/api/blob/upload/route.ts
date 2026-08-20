@@ -1,10 +1,12 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
+import { isAuthenticatedRequest } from "@/lib/server/auth";
 import { isStorageConfigured } from "@/lib/server/storage";
 
 const maximumFileSize = 100 * 1024 * 1024;
 
 export async function POST(request: Request) {
+  if (!isAuthenticatedRequest(request)) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   if (!isStorageConfigured()) {
     return NextResponse.json({ error: "Vercel Blob and Postgres are not connected yet." }, { status: 503 });
   }
@@ -17,7 +19,6 @@ export async function POST(request: Request) {
         maximumSizeInBytes: maximumFileSize,
         addRandomSuffix: true,
       }),
-      onUploadCompleted: async () => undefined,
     });
     return NextResponse.json(response);
   } catch {

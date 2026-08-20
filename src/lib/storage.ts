@@ -193,7 +193,7 @@ export async function saveAttachments(noteId: string, files: File[]): Promise<At
       const id = crypto.randomUUID();
       const createdAt = new Date().toISOString();
       const blob = await upload(`attachments/${noteId}/${id}-${file.name}`, file, {
-        access: "public",
+        access: "private",
         contentType: file.type || "application/octet-stream",
         handleUploadUrl: "/api/blob/upload",
       });
@@ -216,8 +216,8 @@ export async function saveAttachments(noteId: string, files: File[]): Promise<At
 export async function getAttachment(id: string): Promise<StoredAttachment | undefined> {
   if (storageMode === "local") return getLocalAttachment(id);
   const attachment = remoteAttachments.get(id);
-  if (!attachment?.url) return undefined;
-  const response = await fetch(attachment.url);
+  if (!attachment) return undefined;
+  const response = await fetch(`/api/attachments/${id}/content`);
   if (!response.ok) return undefined;
   return { ...attachment, noteId: "", blob: await response.blob() };
 }

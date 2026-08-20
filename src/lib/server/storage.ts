@@ -73,9 +73,16 @@ function attachmentFromRow(row: AttachmentRow): AttachmentMeta {
     type: row.content_type,
     size: Number(row.size),
     createdAt: new Date(row.created_at).toISOString(),
-    url: row.url,
     pathname: row.pathname,
   };
+}
+
+export async function findAttachment(id: string): Promise<AttachmentMeta | undefined> {
+  await ensureSchema();
+  const sql = database();
+  const rows = await sql`SELECT id, note_id, name, content_type, size, url, pathname, created_at FROM latch_attachments WHERE id = ${id}`;
+  const row = (rows as AttachmentRow[])[0];
+  return row ? attachmentFromRow(row) : undefined;
 }
 
 function noteFromRow(row: NoteRow, attachments: AttachmentMeta[]): LatchNote {

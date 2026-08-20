@@ -21,12 +21,14 @@ import {
   Paperclip,
   Plus,
   PushPin,
+  SignOut,
   Sun,
   Trash,
   X,
 } from "@phosphor-icons/react";
 import { zipSync, strToU8 } from "fflate";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useRouter } from "next/navigation";
 import Papa from "papaparse";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -127,6 +129,7 @@ function initialTheme(): "light" | "dark" {
 }
 
 export function LatchApp() {
+  const router = useRouter();
   const [notes, setNotes] = useState<LatchNote[]>([]);
   const [view, setView] = useState<LatchView>("all");
   const [search, setSearch] = useState("");
@@ -353,6 +356,11 @@ export function LatchApp() {
     }
   }
 
+  async function signOut() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/login");
+  }
+
   function closePreview() {
     setPreview((activePreview) => {
       if (activePreview) URL.revokeObjectURL(activePreview.url);
@@ -403,6 +411,10 @@ export function LatchApp() {
           <button className="theme-button" type="button" onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))} aria-label="Toggle color theme">
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
             <span>{theme === "dark" ? "Light canvas" : "Dark canvas"}</span>
+          </button>
+          <button className="quiet-button" type="button" onClick={() => void signOut()}>
+            <SignOut size={18} />
+            Lock Latch
           </button>
         </div>
       </aside>

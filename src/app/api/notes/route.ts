@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { createNote, isStorageConfigured, listNotes } from "@/lib/server/storage";
+import { isAuthenticatedRequest } from "@/lib/server/auth";
 import type { LatchNote } from "@/lib/types";
 
 function unavailable() {
   return NextResponse.json({ error: "Vercel Blob and Postgres are not connected yet." }, { status: 503 });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!isAuthenticatedRequest(request)) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   if (!isStorageConfigured()) return unavailable();
   try {
     return NextResponse.json({ notes: await listNotes() });
@@ -16,6 +18,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!isAuthenticatedRequest(request)) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   if (!isStorageConfigured()) return unavailable();
   try {
     const { note } = (await request.json()) as { note?: LatchNote };
