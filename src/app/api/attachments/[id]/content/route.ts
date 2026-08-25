@@ -15,14 +15,16 @@ export async function GET(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "Attachment is unavailable." }, { status: 404 });
   }
 
-  const headers = new Headers(result.headers);
-  headers.set("content-type", result.blob.contentType || attachment.type);
-  headers.set("content-disposition", `attachment; filename*=UTF-8''${encodeURIComponent(attachment.name)}`);
-  headers.set("cache-control", "private, no-store");
+  const headers = new Headers({
+    "content-type": result.blob.contentType || attachment.type,
+    "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(attachment.name)}`,
+    "cache-control": "private, no-store",
+  });
   // Private Blob responses can omit Content-Length. Never replace that unknown
   // length with zero, or browsers may save a valid stream as an empty file.
+  const upstreamLength = result.headers.get("content-length");
   if (result.blob.size > 0) headers.set("content-length", String(result.blob.size));
-  else headers.delete("content-length");
+  else if (upstreamLength && Number(upstreamLength) > 0) headers.set("content-length", upstreamLength);
 
   return new Response(result.stream, {
     headers,
