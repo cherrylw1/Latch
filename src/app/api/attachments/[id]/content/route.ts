@@ -14,12 +14,17 @@ export async function GET(request: Request, { params }: RouteContext) {
   if (!result || result.statusCode !== 200 || !result.stream) {
     return NextResponse.json({ error: "Attachment is unavailable." }, { status: 404 });
   }
+
+  const headers = new Headers(result.headers);
+  headers.set("content-type", result.blob.contentType || attachment.type);
+  headers.set("content-disposition", `attachment; filename*=UTF-8''${encodeURIComponent(attachment.name)}`);
+  headers.set("cache-control", "private, no-store");
+  // Private Blob responses can omit Content-Length. Never replace that unknown
+  // length with zero, or browsers may save a valid stream as an empty file.
+  if (result.blob.size > 0) headers.set("content-length", String(result.blob.size));
+  else headers.delete("content-length");
+
   return new Response(result.stream, {
-    headers: {
-      "content-type": result.blob.contentType || attachment.type,
-      "content-length": String(result.blob.size),
-      "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(attachment.name)}`,
-      "cache-control": "private, no-store",
-    },
+    headers,
   });
 }
