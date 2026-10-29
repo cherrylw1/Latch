@@ -380,7 +380,7 @@ export function LatchApp() {
 
         <button className="new-note-button" type="button" onClick={() => setComposerOpen(true)}>
           <Plus size={18} weight="bold" />
-          New note
+          <span className="new-note-label">New note</span>
           <kbd>N</kbd>
         </button>
 
@@ -420,6 +420,11 @@ export function LatchApp() {
       </aside>
 
       <section className="workbench">
+        <div className="mobile-brand-lockup">
+          <span className="brand-mark" aria-hidden="true"><i /><i /></span>
+          <span>Latch</span>
+          <small>personal relay</small>
+        </div>
         <header className="workspace-header">
           <div>
             <p className="workspace-kicker">Your personal relay</p>
