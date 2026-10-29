@@ -59,7 +59,7 @@ type Preview = {
 };
 
 const emptyDraft: Draft = { title: "", body: "", sourceUrl: "" };
-const maximumFileSize = 1 * 1024 * 1024 * 1024;
+const maximumFileSize = 2 * 1024 * 1024 * 1024;
 
 const navigation: Array<{
   id: LatchView;
@@ -249,7 +249,7 @@ export function LatchApp() {
   function addFiles(files: FileList | File[]) {
     const usableFiles = Array.from(files).filter((file) => file.size <= maximumFileSize);
     const rejected = Array.from(files).length - usableFiles.length;
-    if (rejected) setNotice(`${rejected} file${rejected > 1 ? "s are" : " is"} over the 1 GB limit.`);
+    if (rejected) setNotice(`${rejected} file${rejected > 1 ? "s are" : " is"} over the 2 GB limit.`);
     setPendingFiles((current) => [...current, ...usableFiles]);
     if (usableFiles.length) setComposerOpen(true);
   }
