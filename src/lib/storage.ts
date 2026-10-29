@@ -7,7 +7,7 @@ const DATABASE_NAME = "latch-local";
 const DATABASE_VERSION = 1;
 const NOTE_STORE = "notes";
 const ATTACHMENT_STORE = "attachments";
-const maximumFileSize = 100 * 1024 * 1024;
+const maximumFileSize = 1 * 1024 * 1024 * 1024;
 
 type StorageMode = "remote" | "local";
 
@@ -109,6 +109,7 @@ async function saveLocalAttachments(noteId: string, files: File[]): Promise<Atta
     type: file.type || "application/octet-stream",
     size: file.size,
     createdAt: new Date().toISOString(),
+    relativePath: file.webkitRelativePath || file.name,
   }));
 
   await Promise.all(
@@ -189,12 +190,13 @@ export async function saveAttachments(noteId: string, files: File[]): Promise<At
 
   const attachments = await Promise.all(
     files.map(async (file) => {
-      if (file.size > maximumFileSize) throw new Error(`${file.name} is over the 100 MB limit.`);
+      if (file.size > maximumFileSize) throw new Error(`${file.name} is over the 1 GB limit.`);
       const id = crypto.randomUUID();
       const createdAt = new Date().toISOString();
       const blob = await upload(`attachments/${noteId}/${id}-${file.name}`, file, {
         access: "private",
         contentType: file.type || "application/octet-stream",
+        multipart: true,
         handleUploadUrl: "/api/blob/upload",
       });
       const attachment: AttachmentMeta = {
@@ -203,6 +205,7 @@ export async function saveAttachments(noteId: string, files: File[]): Promise<At
         type: file.type || "application/octet-stream",
         size: file.size,
         createdAt,
+        relativePath: file.webkitRelativePath || file.name,
         url: blob.url,
         pathname: blob.pathname,
       };

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { isAuthenticatedRequest } from "@/lib/server/auth";
 import { blobReadWriteToken, isStorageConfigured } from "@/lib/server/storage";
 
-const maximumFileSize = 100 * 1024 * 1024;
+const maximumFileSize = 1 * 1024 * 1024 * 1024;
 
 export async function POST(request: Request) {
   if (!isAuthenticatedRequest(request)) return NextResponse.json({ error: "Sign in required." }, { status: 401 });

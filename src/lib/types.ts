@@ -4,6 +4,7 @@ export type AttachmentMeta = {
   type: string;
   size: number;
   createdAt: string;
+  relativePath?: string;
   url?: string;
   pathname?: string;
 };

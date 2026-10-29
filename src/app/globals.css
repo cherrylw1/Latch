@@ -202,6 +202,9 @@ kbd { border-radius: 5px; color: var(--ink-faint); font-family: "SFMono-Regular"
 .inspector-toolbar > div { display: flex; gap: 2px; }
 .inspector-headline { margin-top: 47px; }.inspector-headline > p { margin: 0 0 10px; color: var(--ink-faint); font-family: "SFMono-Regular", Consolas, monospace; font-size: 11px; }
 .inspector-headline h2 { margin: 0; font-size: 27px; font-weight: 690; letter-spacing: -.058em; line-height: 1.04; }
+.copy-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 16px; }
+.copy-actions button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-muted); color: var(--ink-soft); cursor: pointer; font-size: 11px; font-weight: 680; }
+.copy-actions button:hover { border-color: var(--line-strong); color: var(--ink); }.copy-actions button:disabled { cursor: not-allowed; opacity: .48; }
 .note-body-preview { margin-top: 20px; color: var(--ink-soft); line-height: 1.62; }.note-body-preview p { margin: 0 0 12px; }.note-body-preview br { display: block; content: ""; height: 5px; }
 .edit-button { margin-top: 22px; padding: 0; background: transparent; color: var(--accent-deep); font-size: 13px; font-weight: 720; }.edit-button:hover { color: var(--accent); }
 .attachment-section { margin-top: 38px; }.section-line { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }.section-line h3 { margin: 0; font-size: 12px; font-weight: 710; }.section-line span { color: var(--ink-faint); font-family: "SFMono-Regular", Consolas, monospace; font-size: 11px; }

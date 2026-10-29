@@ -7,6 +7,7 @@ import {
   ArrowSquareOut,
   Check,
   CircleNotch,
+  Copy,
   DownloadSimple,
   File,
   FileArrowUp,
@@ -58,7 +59,7 @@ type Preview = {
 };
 
 const emptyDraft: Draft = { title: "", body: "", sourceUrl: "" };
-const maximumFileSize = 100 * 1024 * 1024;
+const maximumFileSize = 1 * 1024 * 1024 * 1024;
 
 const navigation: Array<{
   id: LatchView;
@@ -146,6 +147,7 @@ export function LatchApp() {
   const [theme, setTheme] = useState<"light" | "dark">(initialTheme);
   const [preview, setPreview] = useState<Preview | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const folderInput = useRef<HTMLInputElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
   const reduceMotion = useReducedMotion();
 
@@ -247,7 +249,7 @@ export function LatchApp() {
   function addFiles(files: FileList | File[]) {
     const usableFiles = Array.from(files).filter((file) => file.size <= maximumFileSize);
     const rejected = Array.from(files).length - usableFiles.length;
-    if (rejected) setNotice(`${rejected} file${rejected > 1 ? "s are" : " is"} over the 100 MB limit.`);
+    if (rejected) setNotice(`${rejected} file${rejected > 1 ? "s are" : " is"} over the 1 GB limit.`);
     setPendingFiles((current) => [...current, ...usableFiles]);
     if (usableFiles.length) setComposerOpen(true);
   }
@@ -352,6 +354,19 @@ export function LatchApp() {
     setNotice("Notes export downloaded.");
   }
 
+  async function copyText(value: string, label: string) {
+    if (!value.trim()) {
+      setNotice(`${label} is empty.`);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(value);
+      setNotice(`${label} copied.`);
+    } catch {
+      setNotice(`Latch could not copy the ${label.toLowerCase()}.`);
+    }
+  }
+
   async function downloadEverything() {
     setIsSaving(true);
     try {
@@ -361,8 +376,12 @@ export function LatchApp() {
       };
       await Promise.all(
         attachments.map(async (attachment) => {
-          const safeName = attachment.name.replace(/[\\/:*?"<>|]/g, "-");
-          files[`Latch/files/${safeName}`] = new Uint8Array(await attachment.blob.arrayBuffer());
+          const safePath = (attachment.relativePath || attachment.name)
+            .split(/[\\/]/)
+            .filter((part) => part && part !== "." && part !== "..")
+            .map((part) => part.replace(/[\\:*?"<>|]/g, "-"))
+            .join("/");
+          files[`Latch/files/${safePath || attachment.name}`] = new Uint8Array(await attachment.blob.arrayBuffer());
         }),
       );
       triggerDownload(new Blob([zipSync(files, { level: 0 })], { type: "application/zip" }), "latch-backup.zip");
@@ -492,6 +511,10 @@ export function LatchApp() {
                     <Paperclip size={18} />
                     Attach files
                   </button>
+                  <button className="tool-button" type="button" onClick={() => folderInput.current?.click()}>
+                    <FolderSimple size={18} />
+                    Attach folder
+                  </button>
                   <label className="link-input">
                     <LinkSimple size={17} />
                     <input value={draft.sourceUrl} onChange={(event) => updateDraft("sourceUrl", event.target.value)} placeholder="Add a link" aria-label="Source link" />
@@ -513,7 +536,8 @@ export function LatchApp() {
                   ))}
                 </div>
               ) : null}
-              <input ref={fileInput} className="visually-hidden" type="file" multiple onChange={(event) => event.target.files && addFiles(event.target.files)} />
+              <input ref={fileInput} className="visually-hidden" type="file" multiple onChange={(event) => { if (event.target.files) addFiles(event.target.files); event.currentTarget.value = ""; }} />
+              <input ref={(node) => { folderInput.current = node; node?.setAttribute("webkitdirectory", ""); node?.setAttribute("directory", ""); }} className="visually-hidden" type="file" multiple onChange={(event) => { if (event.target.files) addFiles(event.target.files); event.currentTarget.value = ""; }} />
             </motion.section>
           ) : null}
         </AnimatePresence>
@@ -582,6 +606,7 @@ export function LatchApp() {
             onOpenAttachment={openAttachment}
             onDownloadAttachment={downloadAttachment}
             onExportNotes={downloadNotes}
+            onCopyText={copyText}
           />
         ) : (
           <div className="inspector-empty"><NoteBlank size={26} /><p>Select a note to inspect it.</p></div>
@@ -609,6 +634,7 @@ export function LatchApp() {
               onOpenAttachment={openAttachment}
               onDownloadAttachment={downloadAttachment}
               onExportNotes={downloadNotes}
+              onCopyText={copyText}
             />
           </section>
         </div>
@@ -648,6 +674,7 @@ function NoteInspector({
   onOpenAttachment,
   onDownloadAttachment,
   onExportNotes,
+  onCopyText,
 }: {
   note: LatchNote;
   onChange: (note: LatchNote) => Promise<void>;
@@ -658,6 +685,7 @@ function NoteInspector({
   onOpenAttachment: (attachment: AttachmentMeta) => Promise<void>;
   onDownloadAttachment: (attachment: AttachmentMeta) => Promise<void>;
   onExportNotes: () => void;
+  onCopyText: (value: string, label: string) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ title: note.title, body: note.body, sourceUrl: note.sourceUrl ?? "" });
@@ -691,6 +719,10 @@ function NoteInspector({
           <div className="inspector-headline">
             <p>{formatTime(note.updatedAt)}</p>
             <h2>{noteTitle(note)}</h2>
+            <div className="copy-actions">
+              <button type="button" onClick={() => void onCopyText(note.title.trim() || noteTitle(note), "Title")}><Copy size={15} /> Copy title</button>
+              <button type="button" onClick={() => void onCopyText(note.body, "Note")} disabled={!note.body.trim()}><Copy size={15} /> Copy note</button>
+            </div>
             {note.body ? <div className="note-body-preview">{note.body.split("\n").map((line, index) => line ? <p key={`${line}-${index}`}>{line}</p> : <br key={`break-${index}`} />)}</div> : null}
             {note.sourceUrl ? <a href={note.sourceUrl} target="_blank" rel="noreferrer" className="inspector-link"><LinkSimple size={16} /> {new URL(note.sourceUrl).hostname.replace(/^www\./, "")}<ArrowSquareOut size={14} /></a> : null}
           </div>

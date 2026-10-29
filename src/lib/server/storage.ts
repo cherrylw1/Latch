@@ -21,6 +21,7 @@ type AttachmentRow = {
   size: string | number;
   url: string;
   pathname: string;
+  relative_path: string | null;
   created_at: string;
 };
 
@@ -64,8 +65,10 @@ async function ensureSchema() {
         size BIGINT NOT NULL,
         url TEXT NOT NULL,
         pathname TEXT NOT NULL,
+        relative_path TEXT,
         created_at TIMESTAMPTZ NOT NULL
       )`;
+      await sql`ALTER TABLE latch_attachments ADD COLUMN IF NOT EXISTS relative_path TEXT`;
       await sql`CREATE INDEX IF NOT EXISTS latch_attachments_note_id_idx ON latch_attachments(note_id)`;
     })();
   }
@@ -79,6 +82,7 @@ function attachmentFromRow(row: AttachmentRow): AttachmentMeta {
     type: row.content_type,
     size: Number(row.size),
     createdAt: new Date(row.created_at).toISOString(),
+    relativePath: row.relative_path ?? undefined,
     pathname: row.pathname,
   };
 }
@@ -86,7 +90,7 @@ function attachmentFromRow(row: AttachmentRow): AttachmentMeta {
 export async function findAttachment(id: string): Promise<AttachmentMeta | undefined> {
   await ensureSchema();
   const sql = database();
-  const rows = await sql`SELECT id, note_id, name, content_type, size, url, pathname, created_at FROM latch_attachments WHERE id = ${id}`;
+  const rows = await sql`SELECT id, note_id, name, content_type, size, url, pathname, relative_path, created_at FROM latch_attachments WHERE id = ${id}`;
   const row = (rows as AttachmentRow[])[0];
   return row ? attachmentFromRow(row) : undefined;
 }
@@ -110,7 +114,7 @@ export async function listNotes(): Promise<LatchNote[]> {
   const sql = database();
   const [noteRows, attachmentRows] = await Promise.all([
     sql`SELECT id, title, body, source_url, pinned, archived, created_at, updated_at FROM latch_notes ORDER BY updated_at DESC`,
-    sql`SELECT id, note_id, name, content_type, size, url, pathname, created_at FROM latch_attachments ORDER BY created_at ASC`,
+    sql`SELECT id, note_id, name, content_type, size, url, pathname, relative_path, created_at FROM latch_attachments ORDER BY created_at ASC`,
   ]);
   const attachmentsByNote = new Map<string, AttachmentMeta[]>();
   (attachmentRows as AttachmentRow[]).forEach((row) => {
@@ -129,8 +133,8 @@ export async function createNote(note: LatchNote): Promise<LatchNote> {
   if (note.attachments.length) {
     await sql.transaction(
       note.attachments.map((attachment) =>
-        sql`INSERT INTO latch_attachments (id, note_id, name, content_type, size, url, pathname, created_at)
-          VALUES (${attachment.id}, ${note.id}, ${attachment.name}, ${attachment.type}, ${attachment.size}, ${attachment.url ?? ""}, ${attachment.pathname ?? ""}, ${attachment.createdAt})`,
+        sql`INSERT INTO latch_attachments (id, note_id, name, content_type, size, url, pathname, relative_path, created_at)
+          VALUES (${attachment.id}, ${note.id}, ${attachment.name}, ${attachment.type}, ${attachment.size}, ${attachment.url ?? ""}, ${attachment.pathname ?? ""}, ${attachment.relativePath ?? attachment.name}, ${attachment.createdAt})`,
       ),
     );
   }
@@ -146,7 +150,7 @@ export async function updateNote(id: string, note: LatchNote): Promise<LatchNote
     RETURNING id, title, body, source_url, pinned, archived, created_at, updated_at`;
   const row = (rows as NoteRow[])[0];
   if (!row) return undefined;
-  const attachments = await sql`SELECT id, note_id, name, content_type, size, url, pathname, created_at FROM latch_attachments WHERE note_id = ${id} ORDER BY created_at ASC`;
+  const attachments = await sql`SELECT id, note_id, name, content_type, size, url, pathname, relative_path, created_at FROM latch_attachments WHERE note_id = ${id} ORDER BY created_at ASC`;
   return noteFromRow(row, (attachments as AttachmentRow[]).map(attachmentFromRow));
 }
 
