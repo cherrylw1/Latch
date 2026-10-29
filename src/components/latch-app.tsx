@@ -123,6 +123,16 @@ function triggerDownload(blob: Blob, name: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
+function startRemoteDownload(attachment: AttachmentMeta) {
+  const anchor = document.createElement("a");
+  anchor.href = `/api/attachments/${encodeURIComponent(attachment.id)}/content`;
+  anchor.download = attachment.name;
+  anchor.rel = "noreferrer";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
 function initialTheme(): "light" | "dark" {
   if (typeof window === "undefined") return "dark";
   const persistedTheme = window.localStorage.getItem("latch-theme");
@@ -376,6 +386,12 @@ export function LatchApp() {
   }
 
   async function openAttachment(attachment: AttachmentMeta) {
+    const isPreviewableByMetadata =
+      attachment.type.startsWith("image/") || attachment.type.includes("pdf") || attachment.type.startsWith("text/") || attachment.type.includes("csv") || attachment.type.includes("json");
+    if (getStorageMode() === "remote" && !isPreviewableByMetadata) {
+      startRemoteDownload(attachment);
+      return;
+    }
     const stored = await getAttachment(attachment.id);
     if (!stored) {
       setNotice("This attachment is no longer available locally.");
@@ -397,6 +413,10 @@ export function LatchApp() {
   }
 
   async function downloadAttachment(attachment: AttachmentMeta) {
+    if (getStorageMode() === "remote") {
+      startRemoteDownload(attachment);
+      return;
+    }
     const stored = await getAttachment(attachment.id);
     if (!stored) return setNotice("This attachment is no longer available locally.");
     triggerDownload(stored.blob, stored.name);
