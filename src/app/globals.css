@@ -196,6 +196,7 @@ kbd { border-radius: 5px; color: var(--ink-faint); font-family: "SFMono-Regular"
 .empty-state h2 { margin: 8px 0 0; font-size: 23px; letter-spacing: -.045em; }.empty-state p { margin: 0 0 8px; color: var(--ink-soft); line-height: 1.55; }
 
 .inspection-panel { position: sticky; top: 0; height: 100dvh; overflow-y: auto; border-left: 1px solid var(--line); background: var(--surface); }
+.mobile-note-overlay { display: none; }
 .inspector-content { display: flex; min-height: 100%; flex-direction: column; padding: 24px 22px 20px; }
 .inspector-toolbar { display: flex; align-items: center; justify-content: space-between; color: var(--ink-faint); font-family: "SFMono-Regular", Consolas, monospace; font-size: 10px; letter-spacing: .07em; text-transform: uppercase; }
 .inspector-toolbar > div { display: flex; gap: 2px; }
@@ -224,7 +225,8 @@ kbd { border-radius: 5px; color: var(--ink-faint); font-family: "SFMono-Regular"
 }
 
 @media (max-width: 760px) {
-  .app-shell { display: block; padding-bottom: calc(72px + env(safe-area-inset-bottom)); overflow-x: hidden; }
+  html, body { min-height: 100%; }
+  .app-shell { display: block; min-height: 100svh; padding-bottom: calc(72px + env(safe-area-inset-bottom)); overflow-x: hidden; }
   .side-rail { position: fixed; z-index: 8; top: auto; right: 0; bottom: 0; left: 0; display: block; width: 100%; height: auto; padding: 7px 8px calc(7px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); border-right: 0; background: color-mix(in srgb, var(--rail) 94%, transparent); backdrop-filter: blur(18px); }
   .brand-lockup, .rail-footer { display: none; }
   .new-note-button { position: absolute; right: 10px; bottom: calc(13px + env(safe-area-inset-bottom)); width: 46px; height: 46px; margin: 0; padding: 0; border-radius: 50%; justify-content: center; box-shadow: var(--shadow); }
@@ -232,14 +234,30 @@ kbd { border-radius: 5px; color: var(--ink-faint); font-family: "SFMono-Regular"
   .navigation-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin: 0; padding-right: 57px; }
   .nav-item { display: grid; justify-items: center; gap: 3px; min-height: 46px; padding: 7px 2px; border-radius: 8px; font-size: 10px; }
   .nav-item small { display: none; }.nav-item.is-active { box-shadow: none; }
-  .workbench { padding: 18px 16px 34px; }
+  .workbench { min-height: calc(100svh - 72px); padding: 18px 16px 34px; }
   .mobile-brand-lockup { display: flex; align-items: center; gap: 9px; margin: 0 2px 28px; font-size: 18px; font-weight: 730; letter-spacing: -.06em; }
   .mobile-brand-lockup .brand-mark { transform: scale(.86); transform-origin: left center; margin-right: -2px; }
   .mobile-brand-lockup small { margin-left: auto; color: var(--ink-faint); font-family: "SFMono-Regular", Consolas, monospace; font-size: 9px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
   .workspace-header { align-items: flex-start; flex-direction: column; gap: 18px; margin-bottom: 24px; }.workspace-header h1 { font-size: 34px; }.search-field { width: 100%; min-height: 46px; }.search-field kbd { display: none; }
   .capture-desk { padding: 15px; }.capture-footer { align-items: stretch; flex-direction: column; }.capture-tools { align-items: stretch; flex-direction: column; }.tool-button { justify-content: center; min-height: 44px; }.link-input { padding: 8px 2px; border-top: 1px solid var(--line); }.link-input input { width: 100%; }.save-button { width: 100%; min-height: 44px; }.capture-title, .capture-body, .link-input input, .edit-sheet input, .edit-sheet textarea { font-size: 16px; }
+  .notes-stage { min-height: calc(100svh - 190px); }
   .note-river { grid-template-columns: 1fr; }.note-entry, .note-entry:nth-child(3n + 1) { min-height: auto; grid-row: auto; }.note-entry { padding: 16px; }.note-entry-topline { margin-bottom: 18px; }
-  .inspection-panel { min-height: 360px; margin: 0 16px 18px; border: 1px solid var(--line); border-radius: var(--radius); overflow: visible; }.inspector-content { min-height: 360px; padding: 22px 16px; }.inspector-headline { margin-top: 30px; }
+  .inspection-panel { display: none; }
+  .mobile-note-overlay { position: fixed; inset: 0; z-index: 18; display: block; overflow-y: auto; overscroll-behavior: contain; background: var(--canvas); }
+  .mobile-note-sheet { min-height: 100svh; padding-bottom: calc(24px + env(safe-area-inset-bottom)); background: var(--surface); }
+  .mobile-note-header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; min-height: 58px; padding: 8px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(16px); color: var(--ink-soft); font-family: "SFMono-Regular", Consolas, monospace; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+  .mobile-note-back { display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--ink); cursor: pointer; }
+  .mobile-note-back:hover { background: var(--surface-muted); }
+  .mobile-note-header-spacer { width: 42px; }
+  .mobile-note-sheet .inspector-content { min-height: calc(100svh - 58px); padding: 24px 20px calc(32px + env(safe-area-inset-bottom)); }
+  .mobile-note-sheet .inspector-toolbar { display: none; }
+  .mobile-note-sheet .inspector-headline { margin-top: 10px; }
+  .mobile-note-sheet .inspector-headline h2 { overflow-wrap: anywhere; font-size: clamp(28px, 8vw, 40px); line-height: 1.02; }
+  .mobile-note-sheet .note-body-preview { overflow-wrap: anywhere; font-size: 16px; line-height: 1.7; }
+  .mobile-note-sheet .attachment-section { margin-top: 38px; }
+  .mobile-note-sheet .attachment-row { min-height: 56px; }
+  .mobile-note-sheet .attachment-actions button { width: 40px; height: 40px; }
+  .mobile-note-sheet .inspector-footer { margin-top: 40px; padding-bottom: 10px; }
   .toast { right: 16px; bottom: calc(84px + env(safe-area-inset-bottom)); left: 16px; text-align: center; }.preview-backdrop { padding: 10px; }.preview-dialog { max-height: calc(100dvh - 20px); }.preview-content iframe { min-height: 520px; }
 }
 

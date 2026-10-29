@@ -2,6 +2,7 @@
 
 import {
   Archive,
+  ArrowLeft,
   ArrowClockwise,
   ArrowSquareOut,
   Check,
@@ -137,6 +138,7 @@ export function LatchApp() {
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -177,6 +179,7 @@ export function LatchApp() {
         setComposerOpen(true);
       }
       if (event.key === "Escape") {
+        setMobileInspectorOpen(false);
         setPreview((activePreview) => {
           if (activePreview) URL.revokeObjectURL(activePreview.url);
           return null;
@@ -192,6 +195,15 @@ export function LatchApp() {
     const timeout = window.setTimeout(() => setNotice(null), 3_600);
     return () => window.clearTimeout(timeout);
   }, [notice]);
+
+  useEffect(() => {
+    if (!mobileInspectorOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileInspectorOpen]);
 
   const filteredNotes = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -216,6 +228,11 @@ export function LatchApp() {
   const selected = notes.find((note) => note.id === selectedId) ?? filteredNotes[0] ?? null;
   const activeViewLabel = navigation.find((item) => item.id === view)?.label ?? "All notes";
   const fileCount = notes.filter((note) => !note.archived).reduce((sum, note) => sum + note.attachments.length, 0);
+
+  function selectNote(noteId: string) {
+    setSelectedId(noteId);
+    if (window.matchMedia("(max-width: 760px)").matches) setMobileInspectorOpen(true);
+  }
 
   function updateDraft(key: keyof Draft, value: string) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -288,6 +305,7 @@ export function LatchApp() {
     await removeNote(note.id);
     setNotes((current) => current.filter((item) => item.id !== note.id));
     setSelectedId(null);
+    setMobileInspectorOpen(false);
     setNotice("Note deleted.");
   }
 
@@ -516,7 +534,7 @@ export function LatchApp() {
                   transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                   className={`note-entry ${selected?.id === note.id ? "is-selected" : ""}`}
                   key={note.id}
-                  onClick={() => setSelectedId(note.id)}
+                  onClick={() => selectNote(note.id)}
                 >
                   <div className="note-entry-content">
                     <div className="note-entry-topline">
@@ -569,6 +587,32 @@ export function LatchApp() {
           <div className="inspector-empty"><NoteBlank size={26} /><p>Select a note to inspect it.</p></div>
         )}
       </aside>
+
+      {selected && mobileInspectorOpen ? (
+        <div className="mobile-note-overlay" role="dialog" aria-modal="true" aria-label="Note details">
+          <section className="mobile-note-sheet">
+            <header className="mobile-note-header">
+              <button className="mobile-note-back" type="button" onClick={() => setMobileInspectorOpen(false)} aria-label="Back to notes">
+                <ArrowLeft size={20} weight="bold" />
+              </button>
+              <span>Note details</span>
+              <span className="mobile-note-header-spacer" aria-hidden="true" />
+            </header>
+            <NoteInspector
+              key={`mobile-${selected.id}`}
+              note={selected}
+              onChange={updateNote}
+              onPin={() => togglePinned(selected)}
+              onArchive={() => archiveNote(selected)}
+              onDelete={() => deleteNote(selected)}
+              onDeleteAttachment={(attachment) => deleteAttachment(selected, attachment)}
+              onOpenAttachment={openAttachment}
+              onDownloadAttachment={downloadAttachment}
+              onExportNotes={downloadNotes}
+            />
+          </section>
+        </div>
+      ) : null}
 
       <AnimatePresence>
         {notice ? <motion.div className="toast" initial={reduceMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>{notice}</motion.div> : null}
