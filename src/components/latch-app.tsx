@@ -28,7 +28,7 @@ import {
   Trash,
   X,
 } from "@phosphor-icons/react";
-import { zipSync, strToU8 } from "fflate";
+import { strToU8, Zip, ZipPassThrough, zipSync } from "fflate";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import Papa from "papaparse";
@@ -130,6 +130,32 @@ function initialTheme(): "light" | "dark" {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+function safeArchivePath(value: string) {
+  return value
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter((part) => part && part !== "." && part !== "..")
+    .map((part) => part.replace(/[\\:*?"<>|]/g, "-"))
+    .join("/");
+}
+
+async function createFolderArchive(files: File[]) {
+  const chunks: Uint8Array<ArrayBuffer>[] = [];
+  const archive = new Zip((_error, chunk) => {
+    if (chunk) chunks.push(chunk as Uint8Array<ArrayBuffer>);
+  });
+
+  for (const file of files) {
+    const entry = new ZipPassThrough(safeArchivePath(file.webkitRelativePath || file.name));
+    archive.add(entry);
+    entry.push(new Uint8Array(await file.arrayBuffer()), true);
+  }
+  archive.end();
+
+  const rootName = safeArchivePath(files[0]?.webkitRelativePath || files[0]?.name || "folder").split("/")[0] || "folder";
+  return new globalThis.File(chunks, `${rootName}.zip`, { type: "application/zip", lastModified: Date.now() });
+}
+
 export function LatchApp() {
   const router = useRouter();
   const [notes, setNotes] = useState<LatchNote[]>([]);
@@ -139,6 +165,7 @@ export function LatchApp() {
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [isPackagingFolder, setIsPackagingFolder] = useState(false);
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -252,6 +279,32 @@ export function LatchApp() {
     if (rejected) setNotice(`${rejected} file${rejected > 1 ? "s are" : " is"} over the 2 GB limit.`);
     setPendingFiles((current) => [...current, ...usableFiles]);
     if (usableFiles.length) setComposerOpen(true);
+  }
+
+  async function addFolder(files: FileList | File[]) {
+    const selectedFiles = Array.from(files);
+    if (!selectedFiles.length) return;
+    const selectedSize = selectedFiles.reduce((total, file) => total + file.size, 0);
+    if (selectedSize > maximumFileSize) {
+      setNotice("This folder is over the 2 GB limit.");
+      return;
+    }
+    setIsPackagingFolder(true);
+    setNotice(`Packaging ${selectedFiles.length.toLocaleString()} files into one ZIP…`);
+    try {
+      const archive = await createFolderArchive(selectedFiles);
+      if (archive.size > maximumFileSize) {
+        setNotice("This folder archive is over the 2 GB limit.");
+        return;
+      }
+      setPendingFiles((current) => [...current, archive]);
+      setComposerOpen(true);
+      setNotice(`Folder ready as ${archive.name}.`);
+    } catch {
+      setNotice("Latch could not package that folder. Try a smaller folder.");
+    } finally {
+      setIsPackagingFolder(false);
+    }
   }
 
   async function createNote() {
@@ -511,9 +564,9 @@ export function LatchApp() {
                     <Paperclip size={18} />
                     Attach files
                   </button>
-                  <button className="tool-button" type="button" onClick={() => folderInput.current?.click()}>
-                    <FolderSimple size={18} />
-                    Attach folder
+                  <button className="tool-button" type="button" onClick={() => folderInput.current?.click()} disabled={isPackagingFolder || isSaving}>
+                    {isPackagingFolder ? <CircleNotch size={18} className="spin" /> : <FolderSimple size={18} />}
+                    {isPackagingFolder ? "Packaging folder…" : "Attach folder as ZIP"}
                   </button>
                   <label className="link-input">
                     <LinkSimple size={17} />
@@ -537,7 +590,7 @@ export function LatchApp() {
                 </div>
               ) : null}
               <input ref={fileInput} className="visually-hidden" type="file" multiple onChange={(event) => { if (event.target.files) addFiles(event.target.files); event.currentTarget.value = ""; }} />
-              <input ref={(node) => { folderInput.current = node; node?.setAttribute("webkitdirectory", ""); node?.setAttribute("directory", ""); }} className="visually-hidden" type="file" multiple onChange={(event) => { if (event.target.files) addFiles(event.target.files); event.currentTarget.value = ""; }} />
+              <input ref={(node) => { folderInput.current = node; node?.setAttribute("webkitdirectory", ""); node?.setAttribute("directory", ""); }} className="visually-hidden" type="file" multiple onChange={(event) => { if (event.target.files) void addFolder(event.target.files); event.currentTarget.value = ""; }} />
             </motion.section>
           ) : null}
         </AnimatePresence>
